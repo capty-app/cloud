@@ -75,7 +75,10 @@ export default function AdminDashboard({
                         { label: 'Uploaded items', value: stats.items },
                         { label: 'Users', value: stats.users },
                         { label: 'Total views', value: stats.views_total },
-                        { label: 'Views (last 7d)', value: stats.views_last_7d },
+                        {
+                            label: 'Views (last 7d)',
+                            value: stats.views_last_7d,
+                        },
                     ].map((s) => (
                         <Card key={s.label}>
                             <CardContent className="pt-6">
@@ -149,7 +152,8 @@ export default function AdminDashboard({
                         <CardHeader>
                             <CardTitle>Most viewed items</CardTitle>
                             <CardDescription>
-                                Top items by recorded views (admin views excluded).
+                                Top items by recorded views (admin views
+                                excluded).
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

@@ -145,7 +145,11 @@ export default function ItemStats({
                         </div>
                     </div>
                     <Button asChild variant="outline">
-                        <a href={item.viewer_url} target="_blank" rel="noreferrer">
+                        <a
+                            href={item.viewer_url}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
                             <ExternalLink className="size-4" />
                             Open link
                         </a>
@@ -172,6 +176,7 @@ export default function ItemStats({
                                     2,
                                     Math.round((t.count / maxTimeline) * 100),
                                 );
+
                                 return (
                                     <div
                                         key={t.date}
@@ -214,7 +219,8 @@ export default function ItemStats({
                                             className="flex items-center justify-between py-2 text-sm first:pt-0 last:pb-0"
                                         >
                                             <span className="truncate">
-                                                {c.country_name ?? c.country_code}
+                                                {c.country_name ??
+                                                    c.country_code}
                                             </span>
                                             <Badge variant="secondary">
                                                 {c.count}
@@ -315,10 +321,14 @@ export default function ItemStats({
                                     </span>
                                     <div className="flex gap-2">
                                         <Button
-                                            asChild={!!recent_views.prev_page_url}
+                                            asChild={
+                                                !!recent_views.prev_page_url
+                                            }
                                             variant="outline"
                                             size="sm"
-                                            disabled={!recent_views.prev_page_url}
+                                            disabled={
+                                                !recent_views.prev_page_url
+                                            }
                                         >
                                             {recent_views.prev_page_url ? (
                                                 <Link
@@ -339,10 +349,14 @@ export default function ItemStats({
                                             )}
                                         </Button>
                                         <Button
-                                            asChild={!!recent_views.next_page_url}
+                                            asChild={
+                                                !!recent_views.next_page_url
+                                            }
                                             variant="outline"
                                             size="sm"
-                                            disabled={!recent_views.next_page_url}
+                                            disabled={
+                                                !recent_views.next_page_url
+                                            }
                                         >
                                             {recent_views.next_page_url ? (
                                                 <Link
@@ -387,7 +401,10 @@ function StatCard({ label, value }: { label: string; value: number }) {
 }
 
 function formatDate(iso: string | null): string {
-    if (!iso) return '—';
+    if (!iso) {
+        return '—';
+    }
+
     try {
         return new Date(iso).toLocaleString();
     } catch {
@@ -399,5 +416,6 @@ function formatLocation(v: RecentView): string {
     const parts = [v.city, v.region, v.country_name ?? v.country_code].filter(
         Boolean,
     );
+
     return parts.length ? parts.join(', ') : '—';
 }
