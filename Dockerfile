@@ -40,7 +40,9 @@ RUN apk add --no-cache \
         tini \
         bash \
         curl \
-        oniguruma-dev \
+    # Build deps for PHP ext compilation; removed below.
+    && apk add --no-cache --virtual .build-deps \
+        sqlite-dev \
         libpng-dev \
         libjpeg-turbo-dev \
         libwebp-dev \
@@ -55,8 +57,7 @@ RUN apk add --no-cache \
         bcmath \
         intl \
         opcache \
-    && apk del --no-cache \
-        oniguruma-dev libpng-dev libjpeg-turbo-dev libwebp-dev freetype-dev zlib-dev icu-dev \
+    && apk del --no-network .build-deps \
     && rm -rf /var/cache/apk/*
 
 # PHP config
