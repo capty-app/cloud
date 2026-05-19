@@ -43,10 +43,11 @@ class GalleryController extends Controller
 
     public function show(Gallery $gallery): Response
     {
-        $gallery->load(['items' => fn ($q) => $q->latest()]);
+        $gallery->load(['items' => fn ($q) => $q->withCount('views')->latest()]);
+        $viewsTotal = $gallery->views()->count();
 
         return Inertia::render('admin/galleries/show', [
-            'gallery' => $this->serializeGallery($gallery, withToken: true),
+            'gallery' => $this->serializeGallery($gallery, withToken: true, viewsTotal: $viewsTotal),
             'items' => $gallery->items->map(fn ($i) => [
                 'id' => $i->id,
                 'short_code' => $i->short_code,
@@ -58,6 +59,8 @@ class GalleryController extends Controller
                 'viewer_url' => $i->viewerUrl(),
                 'original_name' => $i->original_name,
                 'created_at' => $i->created_at?->toIso8601String(),
+                'views_count' => (int) ($i->views_count ?? 0),
+                'stats_url' => route('admin.items.stats', $i->id),
             ]),
             'upload_endpoint' => url("/api/galleries/{$gallery->slug}/upload"),
         ]);
@@ -99,7 +102,7 @@ class GalleryController extends Controller
         return back()->with('success', 'API token rotated.');
     }
 
-    private function serializeGallery(Gallery $gallery, bool $withToken = false): array
+    private function serializeGallery(Gallery $gallery, bool $withToken = false, ?int $viewsTotal = null): array
     {
         return [
             'id' => $gallery->id,
@@ -114,6 +117,7 @@ class GalleryController extends Controller
             'public_url' => route('gallery.show', $gallery->slug),
             'api_token' => $withToken ? $gallery->api_token : null,
             'created_at' => $gallery->created_at?->toIso8601String(),
+            'views_total' => $viewsTotal,
         ];
     }
 

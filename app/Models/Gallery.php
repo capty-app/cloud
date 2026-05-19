@@ -35,6 +35,11 @@ class Gallery extends Model
         return $this->hasMany(Item::class);
     }
 
+    public function views(): HasMany
+    {
+        return $this->hasMany(ItemView::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
