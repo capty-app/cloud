@@ -32,6 +32,20 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install npm dependencies
+        # Inertia page renders during tests require the Vite manifest,
+        # so the assets must be built before Pest runs.
+        run: npm ci --include=optional
+
+      - name: Build assets (for Vite manifest)
+        run: npm run build
+
       - name: Copy .env.example
         run: cp .env.example .env
 
