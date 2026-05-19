@@ -5,6 +5,7 @@ namespace App\Providers;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +25,31 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureUrls();
+    }
+
+    /**
+     * Make URL generation respect APP_URL. When APP_URL is https://… all
+     * generated asset/route URLs use HTTPS even if the request arrived as
+     * plain HTTP (e.g. behind a TLS-terminating proxy). When APP_URL is
+     * http://…, URLs stay HTTP — no scheme is forced.
+     */
+    protected function configureUrls(): void
+    {
+        $appUrl = (string) config('app.url');
+        if ($appUrl === '') {
+            return;
+        }
+
+        $scheme = parse_url($appUrl, PHP_URL_SCHEME);
+        if ($scheme === 'https') {
+            URL::forceScheme('https');
+        }
+
+        $host = parse_url($appUrl, PHP_URL_HOST);
+        if ($host) {
+            URL::forceRootUrl($appUrl);
+        }
     }
 
     /**
