@@ -39,6 +39,19 @@ The default storage disk is `local`, writing to `/data/storage` (mounted as a Do
 
 See [Storage drivers](storage-drivers) for the full set of supported drivers and the env variables they expect.
 
+## Upload size
+
+The maximum file size for the upload API is enforced in three places, all derived from a single env var:
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `UPLOAD_MAX_SIZE` | `1024M` | Applied to nginx's `client_max_body_size` and PHP's `upload_max_filesize` + `post_max_size`. Accepts the standard size suffixes — `M`, `G`. Example: `UPLOAD_MAX_SIZE=200M`. |
+| `PHP_MEMORY_LIMIT` | `256M` | PHP per-request memory. Bump this only if you're processing very large images (thumbnail generation decodes into memory). |
+
+Each gallery also has its own **per-gallery max size** set from the admin dashboard, which must be ≤ `UPLOAD_MAX_SIZE`. Setting `UPLOAD_MAX_SIZE` lower than a gallery's configured limit will fail the upload at the nginx layer before Laravel sees it (returns nginx 500/413, not the 422 the API would normally return).
+
+If you change `UPLOAD_MAX_SIZE`, restart the container — the value is interpolated into `nginx.conf` and `php.ini` at container start.
+
 ## Session / queue / cache
 
 | Variable | Default | Notes |

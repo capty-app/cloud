@@ -16,6 +16,11 @@ services:
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
       CACHE_STORE: database
+      # Upload size — applies to nginx client_max_body_size and PHP
+      # upload_max_filesize / post_max_size. Accepts e.g. 200M, 2G.
+      UPLOAD_MAX_SIZE: 1024M
+      # PHP per-request memory; bump only if processing very large images.
+      PHP_MEMORY_LIMIT: 256M
       # Uncomment to use S3-compatible storage:
       # FILESYSTEM_DISK: s3
       # AWS_ACCESS_KEY_ID: changeme

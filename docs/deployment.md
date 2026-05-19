@@ -10,7 +10,8 @@ docker run -d \
   -p 8080:80 \
   -v $(pwd)/data:/data \
   -e APP_URL=http://localhost:8080 \
-  ghcr.io/your-org/capty-cloud:latest
+  -e UPLOAD_MAX_SIZE=1024M \
+  captyapp/cloud:latest
 ```
 
 Then open <http://localhost:8080>. The first page you see is `/setup` — create your admin account, and you're in.

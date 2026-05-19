@@ -60,13 +60,17 @@ RUN apk add --no-cache \
     && apk del --no-network .build-deps \
     && rm -rf /var/cache/apk/*
 
-# PHP config
-COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+# PHP config — php.ini is rendered from a template at container start
+# so values like upload_max_filesize can come from env vars.
+COPY docker/php/php.ini.template /etc/templates/php.ini.template
 COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
 
-# Nginx + supervisor config
-COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
+# Nginx + supervisor config — nginx.conf is also templated.
+COPY docker/nginx/nginx.conf.template /etc/templates/nginx.conf.template
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
+
+# envsubst (for rendering the templates at startup)
+RUN apk add --no-cache gettext
 
 WORKDIR /app
 
