@@ -37,6 +37,11 @@ RUN apk add --no-cache \
         supervisor \
         sqlite \
         sqlite-libs \
+        libpng \
+        libjpeg-turbo \
+        libwebp \
+        freetype \
+        icu-libs \
         tini \
         bash \
         curl \
