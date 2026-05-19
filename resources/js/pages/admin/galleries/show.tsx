@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    BarChart3,
     Copy,
     Eye,
     EyeOff,
@@ -43,6 +44,7 @@ type Gallery = {
     comments_enabled: boolean;
     public_url: string;
     api_token: string;
+    views_total: number | null;
 };
 
 type Item = {
@@ -56,6 +58,8 @@ type Item = {
     viewer_url: string;
     original_name: string | null;
     created_at: string;
+    views_count: number;
+    stats_url: string;
 };
 
 export default function GalleryShow({
@@ -278,6 +282,12 @@ export default function GalleryShow({
                                     </dt>
                                     <dd>{items.length}</dd>
                                 </div>
+                                <div className="flex items-center justify-between gap-3">
+                                    <dt className="text-muted-foreground">
+                                        Total views
+                                    </dt>
+                                    <dd>{gallery.views_total ?? 0}</dd>
+                                </div>
                             </dl>
                         </CardContent>
                     </Card>
@@ -332,7 +342,18 @@ function ItemTile({ item }: { item: Item }) {
                     </div>
                 )}
             </a>
-            <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <Button
+                    asChild
+                    variant="secondary"
+                    size="icon"
+                    className="size-7"
+                    aria-label="Stats"
+                >
+                    <Link href={item.stats_url}>
+                        <BarChart3 className="size-3.5" />
+                    </Link>
+                </Button>
                 <AlertDialog open={deleting} onOpenChange={setDeleting}>
                     <AlertDialogTrigger asChild>
                         <Button
@@ -365,8 +386,15 @@ function ItemTile({ item }: { item: Item }) {
                     </AlertDialogContent>
                 </AlertDialog>
             </div>
-            <div className="mt-1.5 truncate text-xs text-muted-foreground">
-                <code>{item.short_code}</code>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <code className="truncate">{item.short_code}</code>
+                <Link
+                    href={item.stats_url}
+                    className="flex shrink-0 items-center gap-1 hover:underline"
+                >
+                    <Eye className="size-3" />
+                    {item.views_count}
+                </Link>
             </div>
         </div>
     );

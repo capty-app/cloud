@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GeolocateItemView;
 use App\Models\Gallery;
 use App\Models\Item;
+use App\Models\ItemView;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class GalleryViewController extends Controller
 {
@@ -46,6 +50,7 @@ class GalleryViewController extends Controller
     {
         $item = Item::where('short_code', $code)->with('gallery', 'comments.user')->firstOrFail();
         $this->authorizeAccess($item->gallery);
+        $this->recordView($request, $item);
 
         return Inertia::render('viewer/item', [
             'gallery' => [
@@ -94,6 +99,32 @@ class GalleryViewController extends Controller
         $mime = $item->thumb_path ? 'image/jpeg' : $item->mime;
 
         return $this->streamFromDisk($item->disk, $path, $mime);
+    }
+
+    private function recordView(Request $request, Item $item): void
+    {
+        $user = Auth::user();
+        if ($user && $user->isAdmin()) {
+            return;
+        }
+
+        try {
+            $view = ItemView::create([
+                'item_id' => $item->id,
+                'gallery_id' => $item->gallery_id,
+                'viewer_user_id' => $user?->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+                'referer' => substr((string) $request->headers->get('referer'), 0, 255) ?: null,
+            ]);
+
+            GeolocateItemView::dispatch($view->id);
+        } catch (Throwable $e) {
+            Log::warning('Failed to record item view', [
+                'item_id' => $item->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function authorizeAccess(Gallery $gallery): void

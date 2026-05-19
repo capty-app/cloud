@@ -27,6 +27,11 @@ class Item extends Model
         return $this->hasMany(Comment::class)->latest();
     }
 
+    public function views(): HasMany
+    {
+        return $this->hasMany(ItemView::class);
+    }
+
     public static function generateShortCode(): string
     {
         do {

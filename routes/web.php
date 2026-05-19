@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GalleryController as AdminGalleryController;
 use App\Http\Controllers\Admin\ItemController as AdminItemController;
+use App\Http\Controllers\Admin\ItemStatsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DocsController;
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ->name('galleries.rotate-token');
 
     Route::delete('items/{item}', [AdminItemController::class, 'destroy'])->name('items.destroy');
+    Route::get('items/{item}/stats', ItemStatsController::class)->name('items.stats');
 
     Route::resource('users', AdminUserController::class)->except(['create', 'edit', 'show']);
 });
