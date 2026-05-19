@@ -1,0 +1,160 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version number (e.g. 1.0.0, 1.1.0-beta.1)
+        required: true
+        type: string
+      prerelease:
+        description: Mark as pre-release
+        required: true
+        default: false
+        type: boolean
+      latest:
+        description: Mark as latest release
+        required: true
+        default: true
+        type: boolean
+
+env:
+  DOCKER_IMAGE: captyapp/cloud
+
+jobs:
+  release:
+    name: Tag and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Bump version in package.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ inputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 4) + '\n');
+          "
+
+      - name: Bump version in config/app.php
+        run: |
+          sed -i "s/^    'version' => '.*'/    'version' => '${{ inputs.version }}'/" config/app.php
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json config/app.php
+          git commit -m "release: v${{ inputs.version }}"
+          git push
+
+      - name: Create tag
+        run: |
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ inputs.version }}" \
+            --generate-notes \
+            --title "v${{ inputs.version }}" \
+            ${{ inputs.prerelease && '--prerelease' || '' }} \
+            ${{ inputs.latest && '--latest' || '' }}
+
+  build-amd64:
+    name: Build amd64 image
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.version }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.DOCKER_IMAGE }}:${{ inputs.version }}-amd64
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+
+  build-arm64:
+    name: Build arm64 image
+    needs: release
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.version }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.DOCKER_IMAGE }}:${{ inputs.version }}-arm64
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+
+  merge-manifests:
+    name: Create multi-arch manifest
+    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create and push versioned manifest
+        run: |
+          docker buildx imagetools create -t ${{ env.DOCKER_IMAGE }}:${{ inputs.version }} \
+            ${{ env.DOCKER_IMAGE }}:${{ inputs.version }}-amd64 \
+            ${{ env.DOCKER_IMAGE }}:${{ inputs.version }}-arm64
+
+      - name: Create and push :latest manifest
+        if: ${{ inputs.latest }}
+        run: |
+          docker buildx imagetools create -t ${{ env.DOCKER_IMAGE }}:latest \
+            ${{ env.DOCKER_IMAGE }}:${{ inputs.version }}-amd64 \
+            ${{ env.DOCKER_IMAGE }}:${{ inputs.version }}-arm64

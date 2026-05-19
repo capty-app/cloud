@@ -1,0 +1,31 @@
+services:
+  app:
+    build: .
+    image: capty-cloud:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      APP_NAME: "Capty Cloud"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /data/database.sqlite
+      FILESYSTEM_DISK: local
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      # Uncomment to use S3-compatible storage:
+      # FILESYSTEM_DISK: s3
+      # AWS_ACCESS_KEY_ID: changeme
+      # AWS_SECRET_ACCESS_KEY: changeme
+      # AWS_DEFAULT_REGION: us-east-1
+      # AWS_BUCKET: capty
+      # AWS_ENDPOINT: ""
+      # AWS_USE_PATH_STYLE_ENDPOINT: "false"
+    volumes:
+      - capty-data:/data
+
+volumes:
+  capty-data:

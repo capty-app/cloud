@@ -1,0 +1,6 @@
+resources/js/components/ui/*
+resources/views/mail/*
+_old/
+public/build/
+storage/
+vendor/

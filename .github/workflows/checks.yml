@@ -1,0 +1,138 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  php:
+    name: PHP — lint & tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_sqlite, gd, bcmath, intl, fileinfo
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy .env.example
+        run: cp .env.example .env
+
+      - name: Generate APP_KEY
+        run: php artisan key:generate
+
+      - name: Pint (PHP style)
+        run: ./vendor/bin/pint --test
+
+      - name: Pest (with coverage)
+        run: php artisan test --coverage --min=90
+        env:
+          XDEBUG_MODE: coverage
+
+  node:
+    name: Node — typecheck, lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP (needed for vendor dir before npm install)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        # npm install reads from vendor/forjedio/inertia-table/react via a file: dep,
+        # so composer must run first.
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci --include=optional
+
+      - name: TypeScript check
+        run: npm run types:check
+
+      - name: ESLint
+        run: npm run lint:check
+
+      - name: Prettier check
+        run: npm run format:check
+
+      - name: Build assets
+        run: npm run build
+
+  docker:
+    name: Docker build & smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: capty-cloud:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start container
+        run: |
+          docker run -d --name capty-ci \
+            -p 8080:80 \
+            -v /tmp/capty-data:/data \
+            -e APP_URL=http://localhost:8080 \
+            capty-cloud:ci
+
+      - name: Wait for /up to respond 200
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/up || true)
+            if [ "$code" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/30 — got HTTP $code, waiting..."
+            sleep 2
+          done
+          echo "Health check failed after 60s"
+          docker logs capty-ci
+          exit 1
+
+      - name: Verify /setup is reachable (first-run page)
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/setup)
+          test "$code" = "200" || { echo "Expected 200 from /setup, got $code"; docker logs capty-ci; exit 1; }
+
+      - name: Print container logs on failure
+        if: failure()
+        run: docker logs capty-ci
